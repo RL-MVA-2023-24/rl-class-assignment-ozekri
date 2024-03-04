@@ -26,31 +26,15 @@ env = TimeLimit(
 # You have to implement your own agent.
 # Don't modify the methods names and signatures, but you can add methods.
 # ENJOY!
-path='model.pt'
-class ReplayBuffer:
-    def __init__(self, capacity, device):
-        self.capacity = int(capacity) # capacity of the buffer
-        self.data = []
-        self.index = 0 # index of the next cell to be filled
-        self.device = device
-    def append(self, s, a, r, s_, d):
-        if len(self.data) < self.capacity:
-            self.data.append(None)
-        self.data[self.index] = (s, a, r, s_, d)
-        self.index = (self.index + 1) % self.capacity
-    def sample(self, batch_size):
-        batch = random.sample(self.data, batch_size)
-        return list(map(lambda x:torch.Tensor(np.array(x)).to(self.device), list(zip(*batch))))
-    def __len__(self):
-        return len(self.data)
-    
+
 def greedy_action(network, state):
     device = "cuda" if next(network.parameters()).is_cuda else "cpu"
     with torch.no_grad():
         Q = network(torch.Tensor(state).unsqueeze(0).to(device))
         return torch.argmax(Q).item()
-    
-class DQN(nn.Module):
+
+class DQN(nn.Module): #The basic deep Q network
+
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
         self.layer1 = nn.Linear(n_observations, 256)
@@ -59,6 +43,7 @@ class DQN(nn.Module):
         self.layer4 = nn.Linear(256, 256)
         self.layer5 = nn.Linear(256, 256)
         self.layer6 = nn.Linear(256, n_actions)
+
     def forward(self, x):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
@@ -66,6 +51,31 @@ class DQN(nn.Module):
         x = F.relu(self.layer4(x))
         x = F.relu(self.layer5(x))
         return self.layer6(x)
+    
+
+class ReplayBuffer: #The replaybuffer to store
+
+    def __init__(self, capacity, device):
+        self.capacity = int(capacity)
+        self.data = []
+        self.index = 0
+        self.device = device
+
+    def append(self, s, a, r, s_, d):
+        if len(self.data) < self.capacity:
+            self.data.append(None)
+        self.data[self.index] = (s, a, r, s_, d)
+        self.index = (self.index + 1) % self.capacity
+
+    def sample(self, batch_size):
+        batch = random.sample(self.data, batch_size)
+        return list(map(lambda x:torch.Tensor(np.array(x)).to(self.device), list(zip(*batch))))
+    
+    def __len__(self):
+        return len(self.data)
+
+    
+
     
 class ProjectAgent:
     def act(self, observation, use_random=False):
@@ -178,27 +188,7 @@ class ProjectAgent:
 
             
         return episode_return
-'''
-    if __name__ == "__main__":
-         config = {'nb_actions': env.action_space.n,
-              'learning_rate': 0.001,
-              'gamma': 0.95,
-              'buffer_size': 100000,
-              'epsilon_min': 0.02,
-              'epsilon_max': 1.,
-              'epsilon_decay_period': 20000,
-              'epsilon_delay_decay': 500,
-              'gradient_steps': 3,
-              'update_target_strategy': 'replace',
-              'update_target_freq': 400,
-              'update_target_tau': 0.005,
-              'use_Huber_loss': True,
-              'batch_size': 800,
-              }
-         model = DQN(env.observation_space.shape[0],env.action_space.n)
-         print(env)
-         ProjectAgent.train(env, 200)
-'''
+
 config = {'nb_actions': env.action_space.n,
               'learning_rate': 0.001,
               'gamma': 0.95,
@@ -214,6 +204,7 @@ config = {'nb_actions': env.action_space.n,
               'use_Huber_loss': True,
               'batch_size': 800,
               }
+
+
 model = DQN(env.observation_space.shape[0],env.action_space.n)
 agent = ProjectAgent()
-#ep_length = agent.train(env, 200)
